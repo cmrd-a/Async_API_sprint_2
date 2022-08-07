@@ -7,27 +7,27 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.api_models import GenreDescripted, GenresDescripted
-from services.common import RedisService
+from services.cache import RedisCache
 
 
-class GenresService(RedisService):
+class GenresService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        RedisService.__init__(self, redis)
+        self.cache = RedisCache(redis)
         self.elastic = elastic
 
     async def get_by_id(self, genre_id: str) -> GenreDescripted | None:
-        redis_key = f"genres::genre_id::{genre_id}"
-        genre = await self._get_from_cache(key=redis_key, model=GenreDescripted)
+        cache_key = f"genres::genre_id::{genre_id}"
+        genre = await self.cache.get(cache_key, GenreDescripted)
         if not genre:
             genre = await self._get_genre_from_elastic(genre_id)
             if not genre:
                 return None
-            await self._put_to_cache(key=redis_key, obj=genre)
+            await self.cache.put(cache_key, genre)
 
         return genre
 
     async def get_list(self) -> GenresDescripted | None:
-        genres = await self._get_from_cache(key="genres", model=GenresDescripted)
+        genres = await self.cache.get("genres", GenresDescripted)
 
         if not genres:
             resp = await self.elastic.search(index="genres", size=999)
@@ -38,7 +38,7 @@ class GenresService(RedisService):
                 return
 
             genres = GenresDescripted(genres=genres)
-            await self._put_to_cache(key="genres", obj=genres)
+            await self.cache.put("genres", genres)
 
         return genres
 

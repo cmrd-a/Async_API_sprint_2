@@ -8,7 +8,7 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.es_models import Film, Films
-from services.common import RedisService
+from services.cache import RedisCache
 
 
 class ApiSortOptions(str, Enum):
@@ -22,19 +22,19 @@ ELASTIC_SORT_MAP = {
 }
 
 
-class FilmService(RedisService):
+class FilmService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        RedisService.__init__(self, redis)
+        self.cache = RedisCache(redis)
         self.elastic = elastic
 
     async def get_film(self, film_id: str) -> Film | None:
-        redis_key = f"movies::film_id::{film_id}"
-        film = await self._get_from_cache(redis_key, Film)
+        cache_key = f"movies::film_id::{film_id}"
+        film = await self.cache.get(cache_key, Film)
         if not film:
             film = await self._get_film_from_elastic(film_id)
             if not film:
                 return None
-            await self._put_to_cache(redis_key, film)
+            await self.cache.put(cache_key, film)
 
         return film
 
@@ -47,9 +47,11 @@ class FilmService(RedisService):
         page_size: int = 50,
         page_number: int = 1,
     ) -> Films | None:
-        redis_key = f"movies::search_str::{search_str}::sort::{sort}::filter_genre::{filter_genre}::filter_person" \
-                    f"::{filter_person}::page_size::{page_size}::page_number::{page_number}"
-        films = await self._get_from_cache(redis_key, Films)
+        redis_key = (
+            f"movies::search_str::{search_str}::sort::{sort}::filter_genre::{filter_genre}::filter_person"
+            f"::{filter_person}::page_size::{page_size}::page_number::{page_number}"
+        )
+        films = await self.cache.get(redis_key, Films)
         if not films:
             films = await self._get_films_from_elastic(
                 search_str, sort, filter_genre, filter_person, page_size, page_number
@@ -57,7 +59,7 @@ class FilmService(RedisService):
             if not films:
                 return None
 
-            await self._put_to_cache(redis_key, films)
+            await self.cache.put(redis_key, films)
         return films
 
     async def _get_film_from_elastic(self, film_id: str) -> Film | None:

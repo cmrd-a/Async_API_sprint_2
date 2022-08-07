@@ -9,18 +9,18 @@ https://github.com/cmrd-a/Async_API_sprint_2
 
 ### Запуск сервисов:
  1. `cp .env.example .env`
- 2. `docker compose up`
+ 2. `make prod_up`
 
 API доступно по адресу: http://localhost/api/openapi.
 
 А админка по http://localhost/admin/. Логин и пароль 'admin'.
 
 ### Запуск для разработки тестов:
- 1. `cp tests/.env.example tests/.env`
+ 1. `cp tests/functional/.env.example tests/functional/.env`
  2. `make tests_dev_up`
 
 ### Команды для разработки:
- - `make dbs` - поднять только БД.
+ - `make dev_up` - поднять только БД с открытыми портами.
  - `make black` - отформатировать код.
 
 ---
