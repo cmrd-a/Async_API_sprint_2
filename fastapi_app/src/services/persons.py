@@ -7,28 +7,28 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.api_models import PersonWithFilms, PersonRoleInFilms, PersonSearch, FilmRated, FilmsByPerson
-from services.common import RedisService
+from services.cache import RedisCache
 
 
-class PersonsService(RedisService):
+class PersonsService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        RedisService.__init__(self, redis)
+        self.cache = RedisCache(redis)
         self.elastic = elastic
 
     async def get_by_id(self, person_id: str) -> PersonWithFilms | None:
-        redis_key = f"persons::person_id::{person_id}"
-        person = await self._get_from_cache(key=redis_key, model=PersonWithFilms)
+        cache_key = f"persons::person_id::{person_id}"
+        person = await self.cache.get(cache_key, PersonWithFilms)
         if not person:
             person = await self._get_person_with_films_from_elastic(person_id)
             if not person:
                 return None
-            await self._put_to_cache(key=redis_key, obj=person)
+            await self.cache.put(cache_key, person)
 
         return person
 
     async def get_film_detail_by_person(self, person_id: str) -> FilmsByPerson | None:
-        redis_key = f"movies::person_id::{person_id}"
-        films_rated = await self._get_from_cache(key=redis_key, model=FilmsByPerson)
+        cache_key = f"movies::person_id::{person_id}"
+        films_rated = await self.cache.get(cache_key, FilmsByPerson)
 
         if films_rated:
             return FilmsByPerson(films=films_rated.films)
@@ -47,14 +47,14 @@ class PersonsService(RedisService):
 
         if films_rated:
             films_rated_obj = FilmsByPerson(films=films_rated)
-            await self._put_to_cache(key=redis_key, obj=films_rated_obj)
+            await self.cache.put(cache_key, films_rated_obj)
             return films_rated_obj
 
         return
 
     async def search(self, search_str: str, page_size: int = 50, page_number: int = 1) -> PersonSearch | None:
         redis_key = f"persons::search_str::{search_str}::page_size::{page_size}::page_number::{page_number}"
-        person = await self._get_from_cache(key=redis_key, model=PersonSearch)
+        person = await self.cache.get(redis_key, PersonSearch)
         if not person:
             person = await self._get_films_by_person_full_name_from_elastic(
                 search_str=search_str,
@@ -63,7 +63,7 @@ class PersonsService(RedisService):
             )
             if not person:
                 return None
-            await self._put_to_cache(key=redis_key, obj=person)
+            await self.cache.put(redis_key, person)
 
         return person
 
