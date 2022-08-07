@@ -63,10 +63,19 @@ def make_get_request(http_session):
     return inner
 
 
-@pytest_asyncio.fixture(name="create_indexes", scope="session")
-async def _create_indexes(es_client):
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def clear_redis_cache():
     redis = await aioredis.from_url(settings.redis_url)
     await redis.flushall()
+
+    yield
+
+    await redis.flushall()
+    redis.close()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def create_indexes(es_client):
     for index, body in INDEXES.items():
         exist = await es_client.indices.exists(index=index)
         if not exist:
@@ -78,7 +87,6 @@ async def _create_indexes(es_client):
         exist = await es_client.indices.exists(index=index)
         if exist:
             await es_client.indices.delete(index=index)
-    await redis.flushall()
 
 
 def gen_films(qty=100):
@@ -93,5 +101,5 @@ def gen_films(qty=100):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def create_films(create_indexes, es_client):
+async def create_films(es_client):
     await async_bulk(client=es_client, actions=gen_films(2000), refresh=True)
