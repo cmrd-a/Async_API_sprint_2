@@ -37,9 +37,7 @@ async def films_search(
     page_number: int = Query(default=1, alias="page[number]", description="Номер страницы", gt=0, lt=1000),
     film_service: FilmService = Depends(get_film_service),
 ):
-    films = await film_service.get_films(
-        search_str=query, page_size=page_size, page_number=page_number
-    )
+    films = await film_service.get_films(search_str=query, page_size=page_size, page_number=page_number)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=FILMS_NOT_FOUND)
     return films

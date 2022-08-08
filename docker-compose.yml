@@ -2,22 +2,6 @@ version: '3.9'
 
 services:
 
-  postgres:
-    image: postgres:14.3
-    env_file:
-      - .env
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./postgres:/docker-entrypoint-initdb.d
-
-  elastic:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.3.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    volumes:
-      - es_data:/usr/share/elasticsearch/data
-
   etl:
     build:
       context: etl
@@ -37,9 +21,6 @@ services:
       - .env
     depends_on:
       - postgres
-
-  redis:
-    image: redis:7.0.4
 
   fastapi_app:
     build:
@@ -64,8 +45,6 @@ services:
       - fastapi_app
 
 volumes:
-  pg_data:
-  es_data:
   etl_state:
   static:
 
