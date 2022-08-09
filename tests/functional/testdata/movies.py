@@ -82,4 +82,23 @@ movies = [
             {"id": "9", "name": "Igor Rastvorov"},
         ],
     },
+    {
+        "id": "6",
+        "imdb_rating": 8.5,
+        "genres": [{"id": "5", "name": "comedy"}],
+        "title": "Original name",
+        "description": "test description",
+        "actors_names": ["Sherlock", "Inna"],
+        "writers_names": ["Black", "Nicol"],
+        "actors": [
+            {"id": "6", "name": "Inna Druz"},
+        ],
+        "writers": [
+            {"id": "7", "name": "Black Master"},
+            {"id": "8", "name": "Nicol Burateeno"},
+        ],
+        "directors": [
+            {"id": "3", "name": "Evil Cat"},
+        ],
+    },
 ]
