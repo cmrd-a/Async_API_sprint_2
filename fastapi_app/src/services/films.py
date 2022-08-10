@@ -8,7 +8,7 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.es_models import Film, Films
-from services.cache import RedisCache
+from services.common import ElasticService, RedisCache, Cache
 
 
 class ApiSortOptions(str, Enum):
@@ -22,9 +22,9 @@ ELASTIC_SORT_MAP = {
 }
 
 
-class FilmService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.cache = RedisCache(redis)
+class FilmService(ElasticService):
+    def __init__(self, cache: Cache, elastic: AsyncElasticsearch):
+        self.cache = cache
         self.elastic = elastic
 
     async def get_film(self, film_id: str) -> Film | None:
@@ -33,7 +33,7 @@ class FilmService:
         if not film:
             film = await self._get_film_from_elastic(film_id)
             if not film:
-                return None
+                return
             await self.cache.put(cache_key, film)
 
         return film
@@ -57,7 +57,7 @@ class FilmService:
                 search_str, sort, filter_genre, filter_person, page_size, page_number
             )
             if not films:
-                return None
+                return
 
             await self.cache.put(redis_key, films)
         return films
@@ -66,7 +66,7 @@ class FilmService:
         try:
             doc = await self.elastic.get(index="movies", id=film_id)
         except NotFoundError:
-            return None
+            return
         return Film(**doc.body["_source"])
 
     async def _get_films_from_elastic(
@@ -122,12 +122,10 @@ class FilmService:
             size=page_size,
             from_=(page_number - 1) * page_size if page_number > 1 else 0,
         )
-        hits = resp.body.get("hits", {})
-        total = resp.body.get("hits", {})["total"]["value"]
-        _hits = hits.get("hits")
-        if not _hits:
-            return None
-        results = [Film(**hit["_source"]) for hit in _hits]
+        total, hits = self.get_total_and_hits(resp)
+        if not hits:
+            return
+        results = [Film(**hit["_source"]) for hit in hits]
         return Films(total=total, results=results)
 
 
@@ -136,4 +134,4 @@ def get_film_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> FilmService:
-    return FilmService(redis, elastic)
+    return FilmService(RedisCache(redis), elastic)

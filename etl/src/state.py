@@ -29,7 +29,7 @@ class JsonFileStorage(BaseStorage):
                 else:
                     f.write(json.dumps(state))
         except FileNotFoundError:
-            return None
+            return
 
     def retrieve_state(self) -> dict:
         try:
