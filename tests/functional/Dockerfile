@@ -8,4 +8,7 @@ WORKDIR /opt/app
 COPY requirements.txt requirements.txt
 RUN  pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-COPY src .
+COPY . .
+
+RUN ["chmod", "+x", "/opt/app/entrypoint.sh"]
+CMD ["/opt/app/entrypoint.sh"]

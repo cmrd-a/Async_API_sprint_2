@@ -7,27 +7,22 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-    ports:
-      - "9200:9200"
-    volumes:
-      - es_data:/usr/share/elasticsearch/data
 
   redis:
     image: redis:7.0.4
-    ports:
-      - "6379:6379"
 
   fastapi_app:
     build: ../../fastapi_app/
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     depends_on:
       - elastic
       - redis
 
-
-volumes:
-  es_data:
+  tests:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - fastapi_app
 

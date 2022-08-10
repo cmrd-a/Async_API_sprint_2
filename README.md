@@ -15,9 +15,9 @@ API доступно по адресу: http://localhost/api/openapi.
 
 А админка по http://localhost/admin/. Логин и пароль 'admin'.
 
-### Запуск для разработки тестов:
+### Запуск тестов:
  1. `cp tests/functional/.env.example tests/functional/.env`
- 2. `make tests_dev_up`
+ 2. `make tests_up`
 
 ### Команды для разработки:
  - `make dev_up` - поднять только БД с открытыми портами.

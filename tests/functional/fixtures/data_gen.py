@@ -2,11 +2,11 @@ import json
 
 import pytest_asyncio
 from elasticsearch.helpers import async_bulk
-from utils.data_gen import gen_films
 
-from tests.functional.testdata.genres import genres
-from tests.functional.testdata.movies import movies
-from tests.functional.testdata.persons import persons
+from testdata.genres import genres
+from testdata.movies import movies
+from testdata.persons import persons
+from utils.data_gen import gen_films
 
 
 @pytest_asyncio.fixture()

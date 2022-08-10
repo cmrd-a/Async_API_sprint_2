@@ -1,4 +1,4 @@
 #!/bin/bash
 
-#python create_indexes.py
-#python etl_main.py
+python es_waiter.py
+pytest

@@ -15,6 +15,7 @@ from utils.requests import HTTPResponse, http_get_request
 def event_loop():
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
 
@@ -41,7 +42,7 @@ async def clear_redis_cache():
     yield
 
     await redis.flushall()
-    redis.close()
+    await redis.close()
 
 
 @pytest_asyncio.fixture(autouse=True)
