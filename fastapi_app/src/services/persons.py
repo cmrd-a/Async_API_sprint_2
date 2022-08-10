@@ -7,12 +7,12 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.api_models import PersonWithFilms, PersonRoleInFilms, PersonSearch, FilmRated, FilmsByPerson
-from services.cache import RedisCache
+from services.common import ElasticService, RedisCache, Cache
 
 
-class PersonsService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.cache = RedisCache(redis)
+class PersonsService(ElasticService):
+    def __init__(self, cache: Cache, elastic: AsyncElasticsearch):
+        self.cache = cache
         self.elastic = elastic
 
     async def get_by_id(self, person_id: str) -> PersonWithFilms | None:
@@ -21,7 +21,7 @@ class PersonsService:
         if not person:
             person = await self._get_person_with_films_from_elastic(person_id)
             if not person:
-                return None
+                return
             await self.cache.put(cache_key, person)
 
         return person
@@ -62,13 +62,13 @@ class PersonsService:
                 page_number=page_number,
             )
             if not person:
-                return None
+                return
             await self.cache.put(redis_key, person)
 
         return person
 
     async def _get_person_role_in_films(self, person_id: str) -> list[PersonRoleInFilms]:
-        films_doc = await self.elastic.search(
+        resp = await self.elastic.search(
             index="movies",
             body={
                 "query": {
@@ -99,11 +99,11 @@ class PersonsService:
             size=999,
         )
 
-        hits_list = films_doc.body.get("hits", {}).get("hits", [])
+        total, hits = self.get_total_and_hits(resp)
         actor_films_details = []
         writer_films_details = []
         director_films_details = []
-        for hit in hits_list:
+        for hit in hits:
             source = hit["_source"]
             for actor_in_film in source["actors"]:
                 if actor_in_film["id"] == person_id:
@@ -157,15 +157,13 @@ class PersonsService:
         self, search_str: str, page_size: int = 50, page_number: int = 1
     ) -> PersonSearch | None:
 
-        persons_doc = await self.elastic.search(
+        resp = await self.elastic.search(
             index="persons",
             query={"match": {"full_name": {"query": search_str}}},
             size=page_size,
             from_=(page_number - 1) * page_size if page_number > 1 else 0,
         )
-
-        persons_hit_list = persons_doc.body.get("hits", {}).get("hits", [])
-        total = persons_doc.body.get("hits", {})["total"]["value"]
+        total, persons_hit_list = self.get_total_and_hits(resp)
         persons_with_films = []
 
         for person_hit in persons_hit_list:
@@ -193,7 +191,7 @@ class PersonsService:
         try:
             person_doc = await self.elastic.get(index="persons", id=person_id)
         except NotFoundError:
-            return None
+            return
 
         return person_doc.body["_source"]["full_name"]
 
@@ -203,4 +201,4 @@ def get_persons_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonsService:
-    return PersonsService(redis, elastic)
+    return PersonsService(RedisCache(redis), elastic)

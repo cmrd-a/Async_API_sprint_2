@@ -7,12 +7,12 @@ from fastapi import Depends
 from db.elastic import get_elastic
 from db.redis import get_redis
 from models.api_models import GenreDescripted, GenresDescripted
-from services.cache import RedisCache
+from services.common import ElasticService, RedisCache, Cache
 
 
-class GenresService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.cache = RedisCache(redis)
+class GenresService(ElasticService):
+    def __init__(self, cache: Cache, elastic: AsyncElasticsearch):
+        self.cache = cache
         self.elastic = elastic
 
     async def get_by_id(self, genre_id: str) -> GenreDescripted | None:
@@ -21,7 +21,7 @@ class GenresService:
         if not genre:
             genre = await self._get_genre_from_elastic(genre_id)
             if not genre:
-                return None
+                return
             await self.cache.put(cache_key, genre)
 
         return genre
@@ -31,13 +31,13 @@ class GenresService:
 
         if not genres:
             resp = await self.elastic.search(index="genres", size=999)
-            hits = resp.body.get("hits", {}).get("hits", [])
-            genres = [GenreDescripted(**hit["_source"]) for hit in hits]
+            total, hits = self.get_total_and_hits(resp)
 
-            if not genres:
+            if not hits:
                 return
 
-            genres = GenresDescripted(genres=genres)
+            _genres = [GenreDescripted(**hit["_source"]) for hit in hits]
+            genres = GenresDescripted(genres=_genres)
             await self.cache.put("genres", genres)
 
         return genres
@@ -46,7 +46,7 @@ class GenresService:
         try:
             doc = await self.elastic.get(index="genres", id=genre_id)
         except NotFoundError:
-            return None
+            return
         return GenreDescripted(**doc.body["_source"])
 
 
@@ -55,4 +55,4 @@ def get_genres_service(
     redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenresService:
-    return GenresService(redis, elastic)
+    return GenresService(RedisCache(redis), elastic)
