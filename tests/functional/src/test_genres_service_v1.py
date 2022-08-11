@@ -1,5 +1,6 @@
-import pytest
+from http import HTTPStatus
 
+import pytest
 from testdata.genres import genres
 
 
@@ -19,7 +20,7 @@ async def test_genres_list__no_genres__return_status_404(make_get_request):
 
     # assert
     assert response.body["detail"] == "genres not found"
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -38,4 +39,4 @@ async def test_genre_details__no_genre__return_status_404(make_get_request, crea
 
     # assert
     assert response.body["detail"] == "genre not found"
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND

@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import pytest
 
 
@@ -27,7 +29,7 @@ async def test_person_by_id__no_person__return_status_404(make_get_request, crea
 
     # assert
     assert response.body["detail"] == "person not found"
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -54,7 +56,7 @@ async def test_film_details_by_person__no_films__return_status_404(make_get_requ
 
     # assert
     assert response.body["detail"] == "film details not found"
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -117,7 +119,7 @@ async def test_persons_search__no_persons__return_status_404(make_get_request, c
 
     # assert
     assert response.body["detail"] == "persons not found"
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -130,5 +132,5 @@ async def test_persons_search__send_page_size__return_correct_lens(
         {"query": "Igor", "page[size]": page_size},
     )
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     assert len(response.body["persons_with_films"]) == page_size

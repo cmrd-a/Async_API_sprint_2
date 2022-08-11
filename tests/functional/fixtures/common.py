@@ -11,6 +11,13 @@ from testdata.es_indexes import INDEXES
 from utils.requests import HTTPResponse, http_get_request
 
 
+@pytest_asyncio.fixture(name="redis_client", scope="session")
+async def _redis_client():
+    redis = await aioredis.from_url(settings.redis_url)
+    yield redis
+    await redis.close()
+
+
 @pytest_asyncio.fixture(scope="session")
 def event_loop():
     policy = asyncio.get_event_loop_policy()
@@ -35,14 +42,10 @@ async def _http_session():
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def clear_redis_cache():
-    redis = await aioredis.from_url(settings.redis_url)
-    await redis.flushall()
-
+async def clear_redis_cache(redis_client):
+    await redis_client.flushall()
     yield
-
-    await redis.flushall()
-    await redis.close()
+    await redis_client.flushall()
 
 
 @pytest_asyncio.fixture(autouse=True)
