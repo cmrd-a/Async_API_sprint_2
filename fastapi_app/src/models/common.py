@@ -1,4 +1,5 @@
 import orjson
+from fastapi import Query
 from pydantic import BaseModel
 
 
@@ -26,3 +27,13 @@ class Person(IdModel):
 
 class Genre(IdModel):
     name: str
+
+
+class PaginatedParams:
+    def __init__(
+        self,
+        size: int = Query(default=50, alias="page[size]", description="Размер страницы", gt=0, lt=100),
+        number: int = Query(default=1, alias="page[number]", description="Номер страницы", gt=0, lt=1000),
+    ):
+        self.size = size
+        self.number = number
